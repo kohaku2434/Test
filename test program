@@ -1,0 +1,556 @@
+/*老早前做的图书管理系统*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+typedef struct NODE
+{
+	int id;
+	char *name;
+	char *tel;
+	struct NODE *pNext; 
+}Node;
+
+typedef struct PAGE
+{
+	int TotalInfo;		//总条数
+	int TotalPage;		//总页数
+	int OnePageInfo;	//一页显示多少条
+	int CurrentPage;	//当前页
+}Page;
+
+int g_MenuType;
+char g_Key;
+
+Node *GetNodeRand();
+void AddNode(Node **ppHead,Node **ppEnd,Node *pNode);
+int GetId();
+char *GetName();
+char *GetTel();
+void InitInfo(Node **ppHead,Node **ppEnd,int n);
+Page *GetPage(Node *pHead,int n);
+void ShowInfo(Page *pPage,Node *pHead);
+void TurnPage(Page *pPage,Node *pHead);
+char GetKey();
+void ShowMenu(Page *pPage);
+void Browse(Node *pHead);
+Node *GetNode();
+char *GetString();
+void Query(Node *pHead);
+void DeleteNode(Node **ppHead,Node **ppEnd,int id);
+void DeleteInfo(Node **ppHead,Node **ppEnd);
+void UpDataInfo(Node *pHead);
+
+
+int main()
+{
+	Node *pHead = NULL;
+	Node *pEnd = NULL;
+	char c;
+
+	InitInfo(&pHead,&pEnd,100);
+
+	while(1)
+	{
+		printf("1.查看通讯录\n");
+		printf("2.添加信息\n");
+		printf("3.查询信息\n");
+		printf("4.删除信息\n");
+		printf("5.修改信息\n");
+		printf("q.退出\n");
+
+		c = GetKey();
+
+		switch(c)
+		{
+		case '1':
+			g_MenuType = 1;
+			Browse(pHead);
+			break;
+		case '2':
+			AddNode(&pHead,&pEnd,GetNode());
+			break;
+		case '3':
+			g_MenuType = 3;
+			Query(pHead);
+			break;
+		case '4':
+			g_MenuType = 4;
+			DeleteInfo(&pHead,&pEnd);
+			break;
+		case '5':
+			g_MenuType = 5;
+			UpDataInfo(pHead);
+			break;
+		case 'q':
+			return 0;
+			break;
+		}
+	}
+	return 0;
+}
+
+Node *GetNodeRand()
+{
+	Node *pTemp = (Node*)malloc(sizeof(Node));
+	pTemp->id = GetId();
+	pTemp->name = GetName();
+	pTemp->tel = GetTel();
+	pTemp->pNext = NULL;
+
+	return pTemp;
+}
+
+void AddNode(Node **ppHead,Node **ppEnd,Node *pNode)
+{
+	if(*ppHead == NULL)
+	{
+		*ppHead = pNode;
+	}
+	else
+	{
+		(*ppEnd)->pNext = pNode;
+	}
+	*ppEnd = pNode;
+
+	return;
+}
+
+int GetId()
+{
+	static int a = 1;
+
+	return a++;
+}
+
+char *GetName()
+{
+	char *pName = NULL;
+	int i;
+	
+	pName = (char*)malloc(6);
+	for(i=0;i<5;i++)
+	{
+		pName[i] = rand()%26 + 'a';
+	}
+	pName[i] = '\0';
+
+	return pName;
+}
+
+char *GetTel()
+{
+	char *pTel = (char*)malloc(12);
+	int i;
+
+	switch(rand()%4)
+	{
+	case 0:
+		pTel[0] = '1';
+		pTel[1] = '3';
+		pTel[2] = '3';
+		break;
+	case 1:
+		strcpy_s(pTel,12,"155");
+		break;
+	case 2:
+		strcpy_s(pTel,12,"188");
+		break;
+	case 3:
+		strcpy_s(pTel,12,"177");
+		break;
+	}
+
+	for(i=3;i<11;i++)
+	{
+		pTel[i] = rand()%10 + '0';
+	}
+	pTel[i] = '\0';
+
+	return pTel;
+}
+
+void InitInfo(Node **ppHead,Node **ppEnd,int n)
+{
+	int i;
+	srand((unsigned int)time(NULL));
+
+	for(i=0;i<n;i++)
+	{
+		AddNode(ppHead,ppEnd,GetNodeRand());
+	}
+}
+
+Page *GetPage(Node *pHead,int n)
+{
+	Page *pPage = (Page*)malloc(sizeof(Page));
+	pPage->OnePageInfo = n;
+	pPage->CurrentPage = 0;
+	pPage->TotalInfo = 0;
+
+	while(pHead != NULL)
+	{
+		pPage->TotalInfo++;
+		pHead = pHead->pNext;
+	}
+	
+	/*if(pPage->TotalInfo % pPage->OnePageInfo == 0)
+	{
+		pPage->TotalPage = pPage->TotalInfo / pPage->OnePageInfo;
+	}
+	else
+	{
+		pPage->TotalPage = pPage->TotalInfo / pPage->OnePageInfo + 1;
+	}*/
+
+	pPage->TotalPage = pPage->TotalInfo % pPage->OnePageInfo == 0 ? pPage->TotalInfo / pPage->OnePageInfo : 
+		pPage->TotalInfo / pPage->OnePageInfo + 1;
+
+	return pPage;
+}
+
+void ShowInfo(Page *pPage,Node *pHead)
+{
+	int begin = (pPage->CurrentPage - 1) * pPage->OnePageInfo + 1;
+	int end = pPage->CurrentPage * pPage->OnePageInfo;
+	int count = 0;
+
+	while(pHead != NULL)
+	{
+		count++;
+		if(begin<=count && count<=end)
+		{
+			printf("%d  %s  %s\n",pHead->id,pHead->name,pHead->tel);
+		}
+		pHead = pHead->pNext;
+	}
+
+	return;
+}
+
+void TurnPage(Page *pPage,Node *pHead)
+{
+	char c = 's';
+
+	while(1)
+	{
+		switch(c)
+		{
+		case 's':
+			if(pPage->CurrentPage < pPage->TotalPage)
+			{
+				pPage->CurrentPage++;
+				ShowInfo(pPage,pHead);
+				ShowMenu(pPage);
+			}
+			else
+			{
+				printf("已经是最后一页了\n");
+			}
+			break;
+		case 'w':
+			if(pPage->CurrentPage > 1)
+			{
+				pPage->CurrentPage--;
+				ShowInfo(pPage,pHead);
+				ShowMenu(pPage);
+			}
+			else
+			{
+				printf("已经是第一页了\n");
+			}
+			break;
+		case 'b':
+			return;
+			break;
+		case 'c':
+			return;
+			break;
+		case 'd':
+			return;
+			break;
+		case 'u':
+			return;
+			break;
+		default:
+			printf("按错了\n");
+			break;
+		}
+		c = GetKey();
+		g_Key = c;
+	}
+	return;
+}
+
+char GetKey()
+{
+	char c;
+	char z;
+	int flag = 1;
+
+	while((c = getchar()) != '\n' || 1 == flag)
+	{
+		z = c;
+		flag = 0;
+	}
+
+	return z;
+}
+
+void ShowMenu(Page *pPage)
+{
+	switch(g_MenuType)
+	{
+	case 1:
+		printf("当前第%d页  共%d页  共%d条  w上一页  s下一页  b返回\n",pPage->CurrentPage,pPage->TotalPage,pPage->TotalInfo);
+		break;
+	case 3:
+		printf("当前第%d页  共%d页  共%d条  w上一页  s下一页  c重新查询  b返回\n",pPage->CurrentPage,pPage->TotalPage,pPage->TotalInfo);
+		break;
+	case 4:
+		printf("当前第%d页  共%d页  共%d条  w上一页  s下一页  d删除信息  b返回\n",pPage->CurrentPage,pPage->TotalPage,pPage->TotalInfo);
+		break;
+	case 5:
+		printf("当前第%d页  共%d页  共%d条  w上一页  s下一页  u修改信息  b返回\n",pPage->CurrentPage,pPage->TotalPage,pPage->TotalInfo);
+		break;
+	}
+	
+
+	return;
+}
+
+void Browse(Node *pHead)
+{
+	Page *pPage = GetPage(pHead,10);
+	TurnPage(pPage,pHead);
+
+	return;
+}
+
+Node *GetNode()
+{
+	Node *pTemp = (Node*)malloc(sizeof(Node));
+	pTemp->id = GetId();
+	printf("请输入姓名:\n");
+	pTemp->name = GetString();
+	printf("请输入电话:\n");
+	pTemp->tel = GetString();
+	pTemp->pNext = NULL;
+
+	return pTemp;
+}
+
+char *GetString()
+{
+	int size = 5;
+	char *str = (char*)malloc(size);
+	char *pMark = str;
+	char *newstr = NULL;
+	int count = 0;
+	char c;
+	while((c = getchar()) != '\n')
+	{
+		*str = c;
+		str++;
+		count++;
+		if(count + 1 == size)
+		{
+			*str = '\0';
+			size += 5;
+			newstr = (char*)malloc(size);
+			strcpy_s(newstr,size,pMark);
+			free(pMark);
+			pMark = newstr;
+			str = newstr + count;
+		}
+	}
+	*str = '\0';
+
+	return pMark;
+}
+
+void Query(Node *pHead)
+{
+	Node *pNewHead = NULL;
+	Node *pNewEnd = NULL;
+	Node *pTemp = NULL;
+	Node *pMark = pHead;
+	Node *pDel= NULL;
+	
+	//1.输入关键字
+	char *pKeyWord = NULL;
+	while(1)
+	{
+		while(1)
+		{
+			printf("请输入关键字:\n");
+			pKeyWord = GetString();
+			printf("a确认  其他键重新输入\n");
+			if(GetKey() == 'a')
+			{
+				break;
+			}
+			else
+			{
+				free(pKeyWord);
+				pKeyWord = NULL;
+			}
+		}
+
+		//2.根据关键字去匹配
+		//遍历链表
+		pHead = pMark;
+		while(pHead != NULL)
+		{
+			//关键字与姓名和电话都去比较
+			if(0 == strncmp(pKeyWord,pHead->name,strlen(pKeyWord)) || 0 == strncmp(pKeyWord,pHead->tel,strlen(pKeyWord)))
+			{
+				//复制一个新的节点
+				pTemp = (Node*)malloc(sizeof(Node));
+				pTemp->id = pHead->id;
+				pTemp->name = pHead->name;
+				pTemp->tel = pHead->tel;
+				pTemp->pNext = NULL;
+				//添加到新的链表上
+				AddNode(&pNewHead,&pNewEnd,pTemp);
+			}
+			pHead = pHead->pNext;
+		}
+		//分页显示
+		Browse(pNewHead);
+		//清空新的链表
+		while(pNewHead != NULL)
+		{
+			pDel = pNewHead;
+			pNewHead = pNewHead->pNext;
+			free(pDel);
+			pDel = NULL;
+		}
+		pNewEnd = NULL;
+
+		free(pKeyWord);
+		pKeyWord = NULL;
+
+		if('b' == g_Key || 'd' == g_Key || 'u' == g_Key)
+		{
+			break;
+		}
+	}
+}
+
+void DeleteNode(Node **ppHead,Node **ppEnd,int id)
+{
+	Node *pDel = NULL;
+	Node *pMark = *ppHead;
+	
+	if((*ppHead)->id == id)
+	{
+		pDel = *ppHead;
+		*ppHead = (*ppHead)->pNext;
+		free(pDel->name);
+		free(pDel->tel);
+		free(pDel);
+		pDel = NULL;
+		return;
+	}
+
+	while(pMark->pNext != NULL)
+	{
+		if(pMark->pNext->id == id)
+		{
+			pDel = pMark->pNext;
+			pMark->pNext = pMark->pNext->pNext;
+			free(pDel->name);
+			free(pDel->tel);
+			free(pDel);
+			pDel = NULL;
+			if(pMark->pNext == NULL)
+			{
+				*ppEnd = pMark;
+			}
+			return;
+		}
+		pMark = pMark->pNext;
+	}
+
+	return;
+}
+
+void DeleteInfo(Node **ppHead,Node **ppEnd)
+{
+	char *pId = NULL;
+	int id;
+	//1.查询
+	Query(*ppHead);
+	if('b' == g_Key)
+	{
+		return;
+	}
+
+	//2.输入要删除的编号
+	while(1)
+	{
+		printf("请输入要删除的编号:\n");
+		pId = GetString();
+		id = atoi(pId);
+		free(pId);
+		pId = NULL;
+		//根据输入的编号去删除节点
+		DeleteNode(ppHead,ppEnd,id);
+		//3.询问是否继续删除
+		printf("y继续删除  其他键返回\n");
+		if(GetKey() != 'y')
+		{
+			break;
+		}
+	}
+
+	return;
+}
+
+void UpDataInfo(Node *pHead)
+{
+	char *pId = NULL;
+	int id;
+	char *pStr = NULL;
+	//1.查询
+	Query(pHead);
+	if('b' == g_Key)
+	{
+		return;
+	}
+
+	//2.输入要修改的编号
+	printf("请输入要修改的编号:\n");
+	pId = GetString();
+	id = atoi(pId);
+	free(pId);
+	pId = NULL;
+	//根据编号查找节点
+	while(pHead != NULL)
+	{
+		if(pHead->id == id)
+		{
+			//修改姓名
+			printf("请输入姓名:\n");
+			pStr = GetString();
+			if(strlen(pStr) != 0)
+			{
+				free(pHead->name);
+				pHead->name = pStr;
+			}
+			//修改电话
+			printf("请输入电话:\n");
+			pStr = GetString();
+			if(strlen(pStr) != 0)
+			{
+				free(pHead->tel);
+				pHead->tel = pStr;
+			}
+		}
+		pHead = pHead->pNext;
+	}
+	return;
+}
